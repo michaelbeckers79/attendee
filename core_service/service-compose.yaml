@@ -1,0 +1,53 @@
+# Docker Compose for Core Transcription Service
+# No Redis, no PostgreSQL - just the service
+
+services:
+  transcription-service:
+    build:
+      context: ..
+      dockerfile: core_service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Deepgram Configuration (required)
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - DEEPGRAM_MODEL=${DEEPGRAM_MODEL:-nova-2}
+      - DEEPGRAM_LANGUAGE=${DEEPGRAM_LANGUAGE:-en}
+      - DEEPGRAM_SAMPLE_RATE=${DEEPGRAM_SAMPLE_RATE:-16000}
+
+      # Bot Configuration
+      - DEFAULT_BOT_NAME=${DEFAULT_BOT_NAME:-Transcription Bot}
+
+      # Server Configuration
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=${DEBUG:-false}
+
+      # Webhook Configuration
+      - WEBHOOK_TIMEOUT_SECONDS=${WEBHOOK_TIMEOUT_SECONDS:-30}
+      - WEBHOOK_RETRY_COUNT=${WEBHOOK_RETRY_COUNT:-3}
+
+      # API Security (optional)
+      - API_KEY=${API_KEY:-}
+
+      # Display Configuration for Chrome
+      - DISPLAY_WIDTH=${DISPLAY_WIDTH:-1920}
+      - DISPLAY_HEIGHT=${DISPLAY_HEIGHT:-1080}
+    
+    # Chrome needs shared memory
+    shm_size: '2gb'
+    
+    # Security
+    cap_drop:
+      - ALL
+    cap_add:
+      - SYS_ADMIN  # Required for Chrome sandbox
+    
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    restart: unless-stopped
