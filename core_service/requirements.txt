@@ -1,0 +1,26 @@
+# Core FastAPI Transcription Service Dependencies
+# No Django, no Redis - minimal footprint
+
+# Web Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+pydantic==2.10.0
+pydantic-settings==2.6.0
+
+# HTTP Client for webhook delivery
+httpx==0.28.0
+
+# Deepgram transcription (pinned to match main repo)
+deepgram-sdk==4.3.0
+
+# Browser automation (Teams integration)
+selenium==4.27.1
+pyvirtualdisplay==3.0
+websockets==14.1
+
+# Audio processing
+numpy==2.1.3
+webrtcvad==2.0.10
+
+# Utilities
+python-dotenv==1.0.1
