@@ -218,7 +218,6 @@ async def get_bot(
 )
 async def leave_meeting(
     bot_id: str,
-    request: LeaveMeetingRequest = None,
     _: bool = Depends(verify_api_key),
 ) -> BotResponse:
     """Request the bot to leave the meeting."""

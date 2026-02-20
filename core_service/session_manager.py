@@ -104,20 +104,29 @@ class BotSession:
                 self._loop,
             )
         else:
-            # Fallback to synchronous delivery
-            asyncio.run(
-                send_transcription_event(
-                    webhook_url=self.webhook_url,
-                    bot_id=self.id,
-                    speaker_id=speaker_id,
-                    speaker_name=speaker_name,
-                    text=text,
-                    timestamp_ms=timestamp_ms,
-                    duration_ms=duration_ms,
-                    is_final=is_final,
-                    metadata=combined_metadata if combined_metadata else None,
-                )
-            )
+            # Create a new event loop for synchronous context
+            # This is safe because we're not inside an existing event loop
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(
+                        send_transcription_event(
+                            webhook_url=self.webhook_url,
+                            bot_id=self.id,
+                            speaker_id=speaker_id,
+                            speaker_name=speaker_name,
+                            text=text,
+                            timestamp_ms=timestamp_ms,
+                            duration_ms=duration_ms,
+                            is_final=is_final,
+                            metadata=combined_metadata if combined_metadata else None,
+                        )
+                    )
+                finally:
+                    loop.close()
+            except Exception as e:
+                logger.error(f"Error delivering transcription webhook: {e}")
 
     def _create_transcription_manager(self) -> TranscriptionManager:
         """Create the transcription manager for this session."""

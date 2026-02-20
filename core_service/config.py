@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     webhook_timeout_seconds: int = int(os.getenv("WEBHOOK_TIMEOUT_SECONDS", "30"))
     webhook_retry_count: int = int(os.getenv("WEBHOOK_RETRY_COUNT", "3"))
 
+    # Transcription silence timeout (seconds)
+    # Shorter values save Deepgram API costs, longer values handle natural pauses
+    silence_timeout_seconds: int = int(os.getenv("SILENCE_TIMEOUT_SECONDS", "10"))
+
     # API security
     api_key: Optional[str] = os.getenv("API_KEY", None)
 

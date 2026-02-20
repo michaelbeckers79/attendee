@@ -238,8 +238,8 @@ class TranscriptionManager:
         self._handlers: Dict[str, DeepgramStreamingHandler] = {}
         self._speaker_names: Dict[str, str] = {}
 
-        # Silence detection settings (10 seconds for Deepgram to save API costs)
-        self.silence_timeout_seconds = 10
+        # Silence detection timeout from config
+        self.silence_timeout_seconds = settings.silence_timeout_seconds
         self._last_audio_time: Dict[str, float] = {}
 
     def get_or_create_handler(

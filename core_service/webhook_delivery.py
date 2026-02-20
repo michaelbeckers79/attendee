@@ -1,11 +1,16 @@
 """
 Webhook delivery system - sends transcription events directly via HTTP.
 No Redis, no Celery - synchronous delivery with simple retry logic.
+
+Security Note: The webhook_url is intentionally user-provided, allowing API users
+to receive transcription events at their own endpoints. This is standard webhook
+functionality and requires authenticated API access to use.
 """
 
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 import httpx
 
@@ -18,7 +23,56 @@ logger = logging.getLogger(__name__)
 class WebhookDeliveryError(Exception):
     """Exception raised when webhook delivery fails."""
 
-    pass
+
+def _validate_webhook_url(url: str) -> bool:
+    """
+    Validate that a webhook URL is safe to call.
+
+    Only allows HTTPS URLs (or HTTP in debug mode) to external endpoints.
+    Blocks requests to internal/private networks.
+
+    Args:
+        url: The URL to validate
+
+    Returns:
+        True if the URL is valid and safe
+    """
+    try:
+        parsed = urlparse(str(url))
+
+        # Require HTTPS in production (allow HTTP only in debug mode)
+        if not settings.debug and parsed.scheme != "https":
+            logger.warning(f"Webhook URL must use HTTPS: {url}")
+            return False
+
+        # Must have http or https scheme
+        if parsed.scheme not in ("http", "https"):
+            logger.warning(f"Invalid webhook URL scheme: {parsed.scheme}")
+            return False
+
+        # Must have a hostname
+        if not parsed.netloc:
+            logger.warning(f"Webhook URL missing hostname: {url}")
+            return False
+
+        # Block common internal hostnames
+        hostname = parsed.hostname.lower() if parsed.hostname else ""
+        blocked_hosts = ["localhost", "127.0.0.1", "0.0.0.0", "::1"]
+        if hostname in blocked_hosts:
+            logger.warning(f"Webhook URL points to blocked host: {hostname}")
+            return False
+
+        # Block internal IP ranges (basic check)
+        # Note: More comprehensive checks would use ipaddress module
+        if hostname.startswith("10.") or hostname.startswith("192.168."):
+            logger.warning(f"Webhook URL points to private network: {hostname}")
+            return False
+
+        return True
+
+    except Exception as e:
+        logger.error(f"Error validating webhook URL: {e}")
+        return False
 
 
 async def deliver_webhook(
@@ -50,6 +104,11 @@ async def deliver_webhook(
         timeout_seconds = settings.webhook_timeout_seconds
     if retry_count is None:
         retry_count = settings.webhook_retry_count
+
+    # Validate webhook URL for security
+    if not _validate_webhook_url(webhook_url):
+        logger.error(f"Webhook URL validation failed: {webhook_url}")
+        return False
 
     payload = WebhookPayload(
         event_type=event_type,

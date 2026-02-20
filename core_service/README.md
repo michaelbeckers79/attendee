@@ -32,7 +32,7 @@ DEBUG=false
 
 ```bash
 cd core_service
-docker-compose up --build
+docker compose -f service-compose.yaml up --build
 ```
 
 ### Running Locally

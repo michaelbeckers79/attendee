@@ -237,8 +237,10 @@ class TeamsTranscriptionAdapter:
                 ) as server:
                     self.websocket_server = server
                     logger.info(f"WebSocket server started on port {self.websocket_port}")
+                    # Use poll_interval to periodically check if we should stop
                     while self._running:
-                        server.serve_forever(poll_interval=0.5)
+                        server.serve_forever(poll_interval=0.1)
+                        break  # serve_forever returns when shutdown() is called
             except Exception as e:
                 logger.error(f"WebSocket server error: {e}")
 
@@ -246,24 +248,37 @@ class TeamsTranscriptionAdapter:
         self.websocket_thread.start()
 
     def _inject_audio_capture_script(self):
-        """Inject JavaScript to capture audio and send via WebSocket."""
-        # This is a simplified version - the full implementation would
-        # inject the JS from teams_chromedriver_payload.js
+        """
+        Inject JavaScript to capture audio and send via WebSocket.
+
+        NOTE: This is a minimal stub implementation. The full implementation
+        requires the complete JavaScript payload from teams_chromedriver_payload.js
+        in the main bots module to properly capture per-participant audio streams.
+
+        For production use, consider:
+        1. Copying teams_chromedriver_payload.js to this service
+        2. Or reusing the WebBotAdapter from the main bots module
+        """
+        # Basic WebSocket connection for the adapter
+        # The actual audio capture requires more sophisticated JS injection
         script = """
         (function() {
             // Connect to WebSocket server
             const ws = new WebSocket('ws://localhost:""" + str(self.websocket_port) + """');
-            
+
             ws.onopen = () => {
                 console.log('Audio capture WebSocket connected');
             };
-            
+
             ws.onerror = (error) => {
                 console.error('WebSocket error:', error);
             };
-            
+
             // Store reference for cleanup
             window.audioCaptureWs = ws;
+
+            // Note: Full audio capture implementation requires additional code
+            // to intercept WebRTC audio streams and send to the WebSocket
         })();
         """
         self.driver.execute_script(script)

@@ -8,12 +8,46 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 os.environ["DEEPGRAM_API_KEY"] = "test_key"
+os.environ["DEBUG"] = "true"  # Allow HTTP URLs in tests
 
 from core_service.webhook_delivery import (
+    _validate_webhook_url,
     deliver_webhook,
     send_bot_status_event,
     send_transcription_event,
 )
+
+
+class TestWebhookUrlValidation:
+    """Tests for webhook URL validation."""
+
+    def test_valid_https_url(self):
+        """HTTPS URLs should be valid."""
+        assert _validate_webhook_url("https://example.com/webhook") is True
+
+    def test_valid_http_url_in_debug_mode(self):
+        """HTTP URLs are allowed in debug mode."""
+        # DEBUG is set to true in env
+        assert _validate_webhook_url("http://example.com/webhook") is True
+
+    def test_blocked_localhost(self):
+        """Localhost URLs should be blocked."""
+        assert _validate_webhook_url("https://localhost/webhook") is False
+        assert _validate_webhook_url("https://127.0.0.1/webhook") is False
+
+    def test_blocked_private_networks(self):
+        """Private network URLs should be blocked."""
+        assert _validate_webhook_url("https://192.168.1.1/webhook") is False
+        assert _validate_webhook_url("https://10.0.0.1/webhook") is False
+
+    def test_invalid_scheme(self):
+        """Invalid schemes should be rejected."""
+        assert _validate_webhook_url("ftp://example.com/file") is False
+        assert _validate_webhook_url("file:///etc/passwd") is False
+
+    def test_missing_hostname(self):
+        """URLs without hostname should be rejected."""
+        assert _validate_webhook_url("/path/only") is False
 
 
 @pytest.mark.asyncio

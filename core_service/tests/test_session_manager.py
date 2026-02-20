@@ -108,6 +108,7 @@ class TestBotSession:
 
         participant = session.get_participant("p1")
         assert participant is not None
+        # Note: get_participant returns 'participant_full_name' as the key
         assert participant["participant_full_name"] == "John Doe"
         assert participant["is_host"] is True
 
